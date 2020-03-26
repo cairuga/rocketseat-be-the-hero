@@ -8,9 +8,9 @@ module.exports = {
             .where('id', id)
             .select('nome')
             .first();
-
+        
         if (!ong) {
-            return resposnse.status(400).json({error: "Ong não encontrada"});
+            return response.status(400).json({error: "Ong não encontrada"});
         }
         return response.json(ong);    
     }
