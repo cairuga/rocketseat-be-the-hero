@@ -1,0 +1,54 @@
+const connection = require('../database/connection');
+
+module.exports = {
+    async create(request, response) {
+        const { titulo, descricao, valor} = request.body;
+        
+        const ong_id = request.headers.authorization;
+
+        const [id] = await connection('casos').insert({
+            titulo,
+            descricao,
+            valor,
+            ong_id
+        })
+        return response.json( { id } );
+    },
+
+    async index(request, response) {
+        const page_size = 5;
+        const { page = 1 } = request.query;
+
+        const [count] = await connection('casos').count();
+
+        const casos = await connection('casos')
+            .join('ongs', 'ongs.id', '=', 'casos.ong_id')
+            .limit(page_size)
+            .offset((page-1)*page_size)
+            .select(['casos.*', 'ongs.nome', 'ongs.whatsapp', 'ongs.email', 'ongs.cidade', 'ongs.uf']);
+
+        response.header('X-Total-Count', count['count(*)']);  
+        response.header('XX-Page-Size', page_size); 
+
+        return response.json(casos);    
+    },
+
+    async delete(request, response) {
+        const { id } = request.params;
+        const ong_id = request.headers.authorization;
+
+        const caso = await connection('casos')
+            .where('id', id)
+            .select('ong_id')
+            .first();
+        
+        if (caso.ong_id != ong_id) {
+            return response.status(401).json({ error: "Operação não autorizada!"});
+        }
+
+        await connection('casos').where('id', id).delete();
+
+        return response.status(204).send();
+    }
+
+};
